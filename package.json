@@ -5,6 +5,10 @@
   "author": "spencermountain@gmail.com",
   "main": "./src/index.js",
   "type": "module",
+  "files": [
+    "src",
+    "changelog.md"
+  ],
   "bin": {
     "tap-dancer": "./src/cli.js"
   },
