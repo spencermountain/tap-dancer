@@ -1,0 +1,67 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      colorette:
+        specifier: ^1.2.2
+        version: 1.4.0
+      tap-parser:
+        specifier: ^18.3.4
+        version: 18.3.4
+
+packages:
+
+  colorette@1.4.0:
+    resolution: {integrity: sha512-Y2oEozpomLn7Q3HFP7dpww7AtMJplbM9lGZP6RDfHqmbeRjiwRg4n6VM6j4KLmRke85uWEI7JqF17f3pqdRA0g==}
+
+  events-to-array@2.0.3:
+    resolution: {integrity: sha512-f/qE2gImHRa4Cp2y1stEOSgw8wTFyUdVJX7G//bMwbaV9JqISFxg99NbmVQeP7YLnDUZ2un851jlaDrlpmGehQ==}
+    engines: {node: '>=12'}
+
+  tap-parser@18.3.4:
+    resolution: {integrity: sha512-CiqzdpWn2CvONcWp7UNMF9/rCPJwCz0es+qykkgJruu1Y/rAS8A5MEQujmjx9NErfst3dGiZJU3lDS2jBsgbPA==}
+    engines: {node: 20 || >=22}
+    hasBin: true
+
+  tap-yaml@4.4.2:
+    resolution: {integrity: sha512-03mQI7QhfVZHJqGgFyxNTgUbgsG41ZzpWSb7k1Gangmf9hF71Jpb0Fczs7KtOdUDaHx+KxlPUdM2pQJaijebGA==}
+    engines: {node: 20 || >=22}
+
+  yaml-types@0.4.0:
+    resolution: {integrity: sha512-XfbA30NUg4/LWUiplMbiufUiwYhgB9jvBhTWel7XQqjV+GaB79c2tROu/8/Tu7jO0HvDvnKWtBk5ksWRrhQ/0g==}
+    engines: {node: '>= 16', npm: '>= 7'}
+    peerDependencies:
+      yaml: ^2.3.0
+
+  yaml@2.9.1:
+    resolution: {integrity: sha512-3NxN8+78OdzbT7C/WjGsyfPAtJaN3FNDsWxv7Y7mcDsT/oOmgW8BpyQQFFBnvZE3j9Y2Sdz1ULFLezL7Eb2yFw==}
+    engines: {node: '>= 14.6'}
+    hasBin: true
+
+snapshots:
+
+  colorette@1.4.0: {}
+
+  events-to-array@2.0.3: {}
+
+  tap-parser@18.3.4:
+    dependencies:
+      events-to-array: 2.0.3
+      tap-yaml: 4.4.2
+
+  tap-yaml@4.4.2:
+    dependencies:
+      yaml: 2.9.1
+      yaml-types: 0.4.0(yaml@2.9.1)
+
+  yaml-types@0.4.0(yaml@2.9.1):
+    dependencies:
+      yaml: 2.9.1
+
+  yaml@2.9.1: {}

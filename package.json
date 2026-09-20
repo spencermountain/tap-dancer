@@ -5,10 +5,10 @@
   "author": "spencermountain@gmail.com",
   "main": "./src/index.js",
   "bin": {
-    "tap-dancer": "./src/index.js"
+    "tap-dancer": "./src/cli.js"
   },
   "scripts": {
-    "test": "exit 0",
+    "test": "node --test",
     "watch": "node ./scratch.js"
   },
   "repository": {
@@ -26,7 +26,10 @@
   },
   "dependencies": {
     "colorette": "^1.2.2",
-    "tap-in": "3.2.1"
+    "tap-parser": "^18.3.4"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": "20 || >=22"
+  }
 }
