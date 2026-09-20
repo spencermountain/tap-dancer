@@ -1,16 +1,21 @@
-'use strict'
-const test = require('node:test')
-const assert = require('node:assert/strict')
-const { spawnSync } = require('node:child_process')
-const { Readable, Writable } = require('node:stream')
-const { pipeline } = require('node:stream/promises')
-const path = require('node:path')
-const { stripVTControlCharacters } = require('node:util')
-const TapDance = require('../src')
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
+import { Readable, Writable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { stripVTControlCharacters } from 'node:util'
+import { mkdtemp, mkdir, symlink, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import TapDance from '../src/index.js'
+const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const cli = path.join(__dirname, '../src/cli.js')
 const run = (input, args = []) => {
+  const env = { ...process.env, NO_COLOR: '1' }
+  delete env.FORCE_COLOR
   const result = spawnSync(process.execPath, [cli, ...args], {
-    input, encoding: 'utf8', env: { ...process.env, NO_COLOR: '1' },
+    input, encoding: 'utf8', env,
     timeout: 10000, maxBuffer: 8 * 1024 * 1024,
   })
   assert.ifError(result.error)
@@ -87,11 +92,45 @@ test('noreport hides assertion details, not status or protocol errors', () => {
 })
 
 test('the library import has no output or stdin/exit side effects', () => {
-  const code = `process.exitCode = 7; require(${JSON.stringify(path.join(__dirname, '../src'))}); console.log('imported')`
-  const result = spawnSync(process.execPath, ['-e', code], { encoding: 'utf8', input: '' })
+  const code = `process.exitCode = 7; await import(${JSON.stringify(new URL('../src/index.js', import.meta.url).href)}); await import(${JSON.stringify(new URL('../src/cli.js', import.meta.url).href)}); console.log('imported')`
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8', input: '' })
   assert.equal(result.status, 7)
   assert.equal(result.stdout, 'imported\n')
   assert.equal(result.stderr, '')
+})
+
+test('the installed package exposes an ES module default export', async t => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'tap-dancer-esm-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  await mkdir(path.join(directory, 'node_modules'))
+  await symlink(path.resolve(__dirname, '..'), path.join(directory, 'node_modules/tap-dancer'), 'dir')
+  const result = spawnSync(process.execPath, ['--input-type=module', '-e', `
+    import TapDance from 'tap-dancer'
+    import { Transform } from 'node:stream'
+    if (!(new TapDance() instanceof Transform)) throw new Error('invalid default export')
+    console.log('imported')
+  `], { cwd: directory, encoding: 'utf8', timeout: 10000 })
+  assert.ifError(result.error)
+  assert.equal(result.status, 0, result.stderr)
+  assert.equal(result.stdout, 'imported\n')
+  assert.equal(result.stderr, '')
+})
+
+test('both CLI entry points execute through symlinks', async t => {
+  const directory = await mkdtemp(path.join(tmpdir(), 'tap-dancer-bin-'))
+  t.after(() => rm(directory, { recursive: true, force: true }))
+  for (const entry of ['cli.js', 'index.js']) {
+    const bin = path.join(directory, entry)
+    await symlink(path.join(__dirname, '../src', entry), bin)
+    const result = spawnSync(process.execPath, [bin], {
+      input: '1..1\nnot ok 1 broken\n', encoding: 'utf8', timeout: 10000,
+    })
+    assert.ifError(result.error)
+    assert.equal(result.status, 1, result.stderr)
+    assert.match(result.stdout, /1 failed/)
+    assert.match(result.stdout, /FAILED/)
+    assert.equal(result.stderr, '')
+  }
 })
 
 test('documented stream API emits results without changing exit status', async () => {
@@ -178,3 +217,88 @@ test('historical direct entry point remains executable', () => {
   assert.equal(result.status, 0)
   assert.match(result.stdout, /1 passed/)
 })
+
+const nested = (body, name, closing = `ok 1 ${name}`) =>
+  `# Subtest: ${name}\n` + body.split('\n').filter(Boolean).map(line => `    ${line}\n`).join('') + `${closing}\n1..1\n`
+
+for (const directive of ['TODO', 'SKIP']) {
+  test(`deep ${directive} assertion failures do not fail the run`, () => {
+    const input = nested(nested('not ok 1 unfinished\n1..1\n', 'inner', `not ok 1 inner # ${directive} later`), 'outer')
+    const result = run(input)
+    assert.equal(result.status, 0, result.stdout)
+    assert.match(result.stdout, /1 passed, 0 failed/)
+    assert.doesNotMatch(result.stdout, /unfinished|FAILED/)
+  })
+
+  test(`${directive} cannot hide grandchild protocol errors`, () => {
+    const input = nested(nested('ok 1 works\n1..2\n', 'inner', 'not ok 1 inner'), 'outer', `not ok 1 outer # ${directive} later`)
+    const result = run(input, ['-noreport'])
+    assert.equal(result.status, 1, result.stdout)
+    assert.match(result.stdout, /outer > inner: incorrect number of tests/)
+    assert.match(result.stdout, /FAILED/)
+  })
+}
+
+test('nested failures retain diagnostics and subtest context', () => {
+  const input = nested(nested('not ok 1 mismatch\n  ---\n  actual: false\n  expected: 0\n  at: test.js:12\n  ...\n1..1\n', 'inner', 'not ok 1 inner'), 'outer', 'not ok 1 outer')
+  const result = run(input)
+  assert.equal(result.status, 1)
+  assert.match(result.stdout, /outer > inner: mismatch/)
+  assert.match(result.stdout, /actual: false/)
+  assert.match(result.stdout, /want: 0/)
+  assert.match(result.stdout, /at: 'test.js:12'/)
+  const quiet = run(input, ['-noreport'])
+  assert.equal(quiet.status, 1)
+  assert.doesNotMatch(quiet.stdout, /mismatch|actual:|want:|test.js/)
+})
+
+test('child protocol errors explain failure even with a passing closing point', () => {
+  const result = run(nested('ok 1 works\n1..2\n', 'child'))
+  assert.equal(result.status, 1)
+  assert.match(result.stdout, /child: incorrect number of tests/)
+})
+
+test('TODO failures do not conceal an incomplete plan', () => {
+  const result = run(nested('not ok 1 pending\n1..2\n', 'child', 'not ok 1 child # TODO later'))
+  assert.equal(result.status, 1)
+  assert.match(result.stdout, /child: incorrect number of tests/)
+})
+
+test('both CLI entry points support forced color and respect NO_COLOR', () => {
+  for (const entry of [cli, path.join(__dirname, '../src/index.js')]) {
+    for (const noColor of [false, true]) {
+      const env = { ...process.env }
+      delete env.NO_COLOR
+      delete env.FORCE_COLOR
+      if (noColor) env.NO_COLOR = '1'
+      const result = spawnSync(process.execPath, [entry, '--color'], {
+        input: '1..1\nok 1 works\n', encoding: 'utf8', env, timeout: 10000,
+      })
+      assert.ifError(result.error)
+      assert.equal(result.status, 0)
+      assert.equal(result.stdout.includes('\x1b['), !noColor)
+      assert.ok(stripVTControlCharacters(result.stdout).endsWith('✔️\n'))
+    }
+  }
+})
+
+for (const count of [10, 11, 12]) {
+  test(`diagnostic limit preserves the first ten of ${count} failures`, () => {
+    const input = `1..${count}\n` + Array.from({ length: count }, (_, i) =>
+      `not ok ${i + 1} mismatch-${i + 1}\n  ---\n  actual: ${i + 1}\n  expected: 0\n  ...\n`).join('')
+    const result = run(input)
+    assert.equal(result.status, 1)
+    assert.equal((result.stdout.match(/actual:/g) || []).length, 10)
+    assert.match(result.stdout, /#10 - mismatch-10 -\n\s+actual: 10\n\s+want: 0/)
+    assert.match(result.stdout, new RegExp(`${count} failed`))
+    if (count > 10) {
+      assert.doesNotMatch(result.stdout, /mismatch-11|mismatch-12/)
+      assert.match(result.stdout, new RegExp(`${count - 10} additional failure${count === 11 ? '' : 's'} omitted`))
+    } else {
+      assert.doesNotMatch(result.stdout, /omitted/)
+    }
+    const quiet = run(input, ['-noreport'])
+    assert.equal(quiet.status, 1)
+    assert.doesNotMatch(quiet.stdout, /mismatch|actual:|omitted/)
+  })
+}

@@ -43,16 +43,24 @@ is valid. Normal console output is preserved alongside valid TAP.
 Passed, failed, skipped, and TODO test points are counted separately. TODO
 failures do not fail the run. For nested TAP, the displayed counts describe the
 top-level test points; the parser also validates their child tests.
+Nested failures include their subtest path and assertion diagnostics. TODO/SKIP
+directives suppress assertion failures throughout the marked subtest, but
+malformed TAP and bailouts still fail the run at every nesting level.
+Reports show details for the first 10 failures, followed by the number of
+additional failures omitted. The final counts always include all test points.
 
 ### API
 
 The default export is a Transform stream. Importing it does not read stdin,
 print anything, or change the host process's exit status.
+The package uses ES modules. Use `import TapDance from 'tap-dancer'`; CommonJS
+callers can use `const { default: TapDance } = await import('tap-dancer')`
+inside an async function.
 
 ```js
-const test = require('tape')
-const TapDance = require('tap-dancer')
-const { pipeline } = require('node:stream')
+import test from 'tape'
+import TapDance from 'tap-dancer'
+import { pipeline } from 'node:stream'
 
 const reporter = new TapDance({ noreport: false })
 reporter.on('complete', results => {
@@ -84,6 +92,8 @@ stream/parser errors emit `error` and are handled by `pipeline`.
 ### Development
 
 Run `npm install`, then `npm test`. The suite exercises the real CLI with TAP
-fixtures and tests the stream API, exit status, and output flushing.
+fixtures and tests the stream API, exit status, and output flushing. Integration
+tests pipe real Tape suites into the CLI to cover asynchronous assertions,
+skips, failure diagnostics, rejected promises, and the diagnostic limit.
 
 MIT

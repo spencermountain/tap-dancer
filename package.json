@@ -1,15 +1,17 @@
 {
   "name": "tap-dancer",
-  "version": "0.3.4",
+  "version": "0.4.0",
   "description": "a quick human-readable test-reporter for Tap",
   "author": "spencermountain@gmail.com",
   "main": "./src/index.js",
+  "type": "module",
   "bin": {
     "tap-dancer": "./src/cli.js"
   },
   "scripts": {
     "test": "node --test",
-    "watch": "node ./scratch.js"
+    "watch": "node ./scratch.js",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -25,8 +27,12 @@
     "url": "https://github.com/spencermountain/tap-dance/issues"
   },
   "dependencies": {
-    "colorette": "^1.2.2",
     "tap-parser": "^18.3.4"
+  },
+  "devDependencies": {
+    "eslint": "10.11.0",
+    "eslint-plugin-regexp": "3.3.1",
+    "tape": "^5.10.2"
   },
   "license": "MIT",
   "engines": {

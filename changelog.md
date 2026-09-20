@@ -2,6 +2,7 @@
 
 
 ### 0.4.0 [Sep 2026]
+- **[breaking]** Converted to ES modules; use the default import for the stream API.
 - **[fix]** Invalid/incomplete TAP and bailouts now fail.
 - **[fix]** TODO/SKIP counts behave correctly.
 - **[fix]** Output flushes before exit.

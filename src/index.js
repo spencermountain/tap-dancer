@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-'use strict'
-const { Transform } = require('node:stream')
-const { StringDecoder } = require('node:string_decoder')
-const { inspect } = require('node:util')
-const { Parser } = require('tap-parser')
-const c = require('colorette')
-const { duration, niceNumber } = require('./fns')
+import { Transform } from 'node:stream'
+import { StringDecoder } from 'node:string_decoder'
+import { inspect } from 'node:util'
+import { Parser } from 'tap-parser'
+import * as c from './colors.js'
+import { duration, niceNumber } from './fns.js'
+import { isMain } from './is-main.js'
 
 // Importing the reporter does not read stdin or change the host's exit status.
 class TapDance extends Transform {
@@ -19,8 +19,7 @@ class TapDance extends Transform {
     this.protocolErrors = []
     this.results = null
     this.parser = new Parser()
-    this.children = []
-    this.parser.on('child', child => this.children.push(child))
+    this.tree = this.trackParser(this.parser)
     this.parser.on('error', err => this.destroy(err))
     this.parser.on('assert', assertion => {
       if (assertion.skip) {
@@ -34,7 +33,6 @@ class TapDance extends Transform {
         this.push(c.green('•'))
       } else {
         this.counts.failed += 1
-        this.failures.push(assertion)
         this.push(c.red('✗'))
       }
     })
@@ -48,6 +46,43 @@ class TapDance extends Transform {
       this.push(text)
     })
     this.parser.on('complete', results => this.finishReport(results))
+  }
+
+  trackParser(parser) {
+    const node = { parser, children: [] }
+    parser.on('child', child => node.children.push(this.trackParser(child)))
+    return node
+  }
+
+  collectResults(node, errors, path = [], suppressed = false) {
+    const { parser, children } = node
+    const parsed = parser.results
+    const prefix = path.length ? path.join(' > ') + ': ' : ''
+    const addError = message => errors.push(prefix + message)
+    for (const failure of parsed.failures) {
+      if (failure.tapError) addError(failure.tapError)
+      if (!suppressed && !failure.ok && !failure.skip && !failure.todo &&
+          Object.hasOwn(failure, 'name')) {
+        this.failures.push({ ...failure, name: prefix + (failure.name || 'unnamed assertion') })
+      }
+    }
+    if (parser.syntheticPlan && !parsed.bailout) {
+      addError('No TAP tests or explicit plan received')
+    }
+    // The parser may omit this check when an assertion already failed.
+    if (!parsed.bailout && parsed.plan.start !== null &&
+        parsed.count !== parsed.plan.end - parsed.plan.start + 1) {
+      addError('incorrect number of tests')
+    }
+    if (parsed.bailout) {
+      addError('Bail out!' + (typeof parsed.bailout === 'string' ? ' ' + parsed.bailout : ''))
+    }
+    for (const child of children) {
+      const closing = child.parser.closingTestPoint
+      this.collectResults(child, errors,
+        [...path, child.parser.name || closing?.name || 'unnamed subtest'],
+        suppressed || Boolean(closing?.todo || closing?.skip))
+    }
   }
 
   _transform(chunk, encoding, callback) {
@@ -69,33 +104,18 @@ class TapDance extends Transform {
   }
 
   finishReport(parsed) {
-    const errors = [...new Set([
-      ...this.protocolErrors,
-      ...parsed.failures.filter(f => f.tapError).map(f => f.tapError),
-    ])]
-    // tap-parser synthesizes a successful 1..0 plan for empty input. A reporter
-    // must distinguish that from a producer explicitly skipping its tests.
-    if (this.parser.syntheticPlan && !parsed.bailout) {
-      errors.push('No TAP tests or explicit plan received')
-    }
-    if (parsed.bailout) {
-      errors.push('Bail out!' + (typeof parsed.bailout === 'string' ? ' ' + parsed.bailout : ''))
-    }
-    // tap-parser marks the parent not-ok as soon as a child fails, before the
-    // child's closing test point can mark that failure as TODO or SKIP.
-    const failedChildren = this.children.filter(child => !child.results.ok)
-    const expectedChildFailures = failedChildren.length > 0 && parsed.failures.length === 0 &&
-      failedChildren.every(child =>
-        (child.closingTestPoint?.todo || child.closingTestPoint?.skip) &&
-        !child.results.bailout && !child.results.failures.some(f => f.tapError))
-    const ok = (parsed.ok || expectedChildFailures) && errors.length === 0
+    const collectedErrors = [...this.protocolErrors]
+    this.collectResults(this.tree, collectedErrors)
+    const errors = [...new Set(collectedErrors)]
+    // Evaluate the full tree after closing directives are known. TODO/SKIP
+    // suppress assertion failures, but never malformed TAP or bailouts.
+    const ok = this.failures.length === 0 && errors.length === 0
     this.results = { ...parsed, ok, counts: { ...this.counts }, errors }
     this.push('\n')
 
     if (!this.options.noreport) {
-      this.failures.forEach((assertion, i) => {
+      this.failures.slice(0, 10).forEach((assertion, i) => {
         this.push(c.red(`\n   #${i + 1} - ${assertion.name || 'unnamed assertion'} -\n`))
-        if (this.failures.length > 10) return
         const diag = assertion.diag || {}
         const actual = Object.hasOwn(diag, 'actual') ? 'actual' : 'found'
         for (const [key, label] of [[actual, 'actual'], ['expected', 'want'], ['message', 'message'], ['at', 'at']]) {
@@ -104,6 +124,10 @@ class TapDance extends Transform {
           }
         }
       })
+      const remaining = this.failures.length - 10
+      if (remaining > 0) {
+        this.push(c.red(`\n   ${niceNumber(remaining)} additional failure${remaining === 1 ? '' : 's'} omitted\n`))
+      }
     }
     // Protocol failures stay visible even with -noreport.
     for (const error of errors) this.push(c.red(`   ${error}\n`))
@@ -118,7 +142,9 @@ class TapDance extends Transform {
   }
 }
 
-module.exports = TapDance
+export default TapDance
 
 // Keep the historical direct invocation working as well as the package bin.
-if (require.main === module) require('./cli')()
+if (isMain(import.meta.url)) {
+  import('./cli.js').then(({ default: run }) => run())
+}

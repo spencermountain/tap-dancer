@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-'use strict'
-const { pipeline } = require('node:stream')
+/* eslint-disable no-console */
+import { pipeline } from 'node:stream'
+import { enableColor } from './colors.js'
+import TapDance from './index.js'
+import { isMain } from './is-main.js'
 
 const run = function () {
   const args = process.argv.slice(2)
-  if (args.includes('--color')) process.env.FORCE_COLOR = '1'
-  const TapDance = require('./index')
+  if (args.includes('--color')) enableColor()
   const reporter = new TapDance({ noreport: args.includes('-noreport') || args.includes('--noreport') })
   const nofail = args.includes('-nofail') || args.includes('--nofail')
   reporter.on('complete', results => {
@@ -19,5 +21,5 @@ const run = function () {
   })
 }
 
-module.exports = run
-if (require.main === module) run()
+export default run
+if (isMain(import.meta.url)) run()
