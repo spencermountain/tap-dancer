@@ -2,7 +2,7 @@
   "name": "tap-dancer",
   "version": "0.4.1",
   "description": "a quick human-readable test-reporter for Tap",
-  "author": "spencermountain@gmail.com",
+  "author": "Spencer Kelly <spencermountain@gmail.com> (https://spencermountain.dev)",
   "main": "./src/index.js",
   "type": "module",
   "files": [
@@ -17,19 +17,12 @@
     "watch": "node ./scratch.js",
     "lint": "eslint ."
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/spencermountain/tap-dance.git"
-  },
+  "repository": "github:spencermountain/tap-dancer",
   "keywords": [
     "reporter",
     "tap",
     "tape"
   ],
-  "homepage": "https://github.com/spencermountain/tap-dance#readme",
-  "bugs": {
-    "url": "https://github.com/spencermountain/tap-dance/issues"
-  },
   "dependencies": {
     "tap-parser": "^18.3.4"
   },
@@ -40,6 +33,6 @@
   },
   "license": "MIT",
   "engines": {
-    "node": "20 || >=22"
+    "node": ">=20"
   }
 }
