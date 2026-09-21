@@ -1,6 +1,6 @@
 {
   "name": "tap-dancer",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "a quick human-readable test-reporter for Tap",
   "author": "spencermountain@gmail.com",
   "main": "./src/index.js",

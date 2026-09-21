@@ -1,3 +1,6 @@
+### 0.4.1 [Sep 2026]
+- **[change]** dont print non-zero output
+ 
 ### 0.4.0 [Sep 2026]
 
 - **[breaking]** Converted to ES modules; use the default import for the stream API.

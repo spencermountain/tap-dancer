@@ -136,7 +136,11 @@ class TapDance extends Transform {
     }
     this.push(c.gray(`   ${duration(this.started)}s\n`))
     const { passed, failed, skipped, todo } = this.counts
-    this.push(`   ${niceNumber(passed)} passed, ${niceNumber(failed)} failed, ${niceNumber(skipped)} skipped, ${niceNumber(todo)} TODO\n`)
+    const summary = [`${niceNumber(passed)} passed`]
+    for (const [count, label] of [[failed, 'failed'], [skipped, 'skipped'], [todo, 'TODO']]) {
+      if (count > 0) summary.push(`${niceNumber(count)} ${label}`)
+    }
+    this.push(`   ${summary.join(', ')}\n`)
     this.push(ok ? c.green('   ✔️\n') : c.red('   FAILED\n'))
     this.emit('complete', this.results)
   }

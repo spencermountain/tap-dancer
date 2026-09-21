@@ -73,7 +73,7 @@ test('real Tape asynchronous assertions and skipped tests pass through the CLI',
   `)
   assert.equal(result.producerStatus, 0, result.producerError)
   assert.equal(result.status, 0, result.output)
-  assert.match(result.output, /2 passed, 0 failed, 1 skipped, 0 TODO/)
+  assert.match(result.output, /2 passed, 1 skipped\n/)
   assert.ok(result.output.endsWith('✔️\n'))
 })
 

@@ -189,7 +189,7 @@ test('ordinary logging does not invalidate an otherwise valid run', () => {
 test('a TODO subtest does not become a hard failure', () => {
   const result = run('# Subtest: pending\n    1..1\n    not ok 1 unfinished\nnot ok 1 pending # TODO later\n1..1\n')
   assert.equal(result.status, 0)
-  assert.match(result.stdout, /0 passed, 0 failed, 0 skipped, 1 TODO/)
+  assert.match(result.stdout, /0 passed, 1 TODO\n/)
 })
 
 test('parser errors propagate through the stream API', async () => {
@@ -226,7 +226,7 @@ for (const directive of ['TODO', 'SKIP']) {
     const input = nested(nested('not ok 1 unfinished\n1..1\n', 'inner', `not ok 1 inner # ${directive} later`), 'outer')
     const result = run(input)
     assert.equal(result.status, 0, result.stdout)
-    assert.match(result.stdout, /1 passed, 0 failed/)
+    assert.match(result.stdout, /1 passed\n/)
     assert.doesNotMatch(result.stdout, /unfinished|FAILED/)
   })
 
