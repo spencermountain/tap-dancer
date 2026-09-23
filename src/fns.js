@@ -1,5 +1,5 @@
 //add commas to numbers
-const niceNumber = x => {
+const niceNumber = function (x) {
   const str = x.toString()
   const result = []
   let digits = 0

@@ -2,22 +2,29 @@
   "name": "tap-dancer",
   "version": "0.4.1",
   "description": "a quick human-readable test-reporter for Tap",
+  "license": "MIT",
+  "repository": "github:spencermountain/tap-dancer",
   "author": "Spencer Kelly <spencermountain@gmail.com> (https://spencermountain.dev)",
-  "main": "./src/index.js",
   "type": "module",
-  "files": [
-    "src",
-    "changelog.md"
-  ],
+  "main": "./src/index.js",
   "bin": {
     "tap-dancer": "./src/cli.js"
   },
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@11.5.0",
   "scripts": {
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
+    "test:integration": "pnpm --dir integration/tape test",
     "watch": "node ./scratch.js",
     "lint": "eslint ."
   },
-  "repository": "github:spencermountain/tap-dancer",
+  "files": [
+    "changelog.md",
+    "src"
+  ],
   "keywords": [
     "reporter",
     "tap",
@@ -25,15 +32,5 @@
   ],
   "dependencies": {
     "tap-parser": "^18.3.4"
-  },
-  "devDependencies": {
-    "eslint": "10.11.0",
-    "eslint-plugin-regexp": "3.3.1",
-    "tape": "^5.10.2"
-  },
-  "sideEffects": false,
-  "license": "MIT",
-  "engines": {
-    "node": ">=20"
   }
 }

@@ -1,8 +1,5 @@
-import * as regexpPlugin from 'eslint-plugin-regexp'
-
 export default [
   { ignores: ['**/builds/*', './scratch.js'] },
-  regexpPlugin.configs['flat/recommended'],
   {
     languageOptions: {
       ecmaVersion: 'latest',

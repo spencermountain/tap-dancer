@@ -1,0 +1,12 @@
+{
+  "name": "tap-dancer-tape-integration",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.5.0",
+  "scripts": {
+    "test": "node --test tape.test.js"
+  },
+  "devDependencies": {
+    "tape": "5.10.2"
+  }
+}

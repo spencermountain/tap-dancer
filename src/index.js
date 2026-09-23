@@ -60,7 +60,9 @@ class TapDance extends Transform {
     const { parser, children } = node
     const parsed = parser.results
     const prefix = path.length > 0 ? path.join(' > ') + ': ' : ''
-    const addError = (message) => errors.push(prefix + message)
+    const addError = (message) => {
+      errors.push(prefix + message)
+    }
     for (const failure of parsed.failures) {
       if (failure.tapError) addError(failure.tapError)
       if (
@@ -122,8 +124,8 @@ class TapDance extends Transform {
     const errors = [...new Set(collectedErrors)]
     // Evaluate the full tree after closing directives are known. TODO/SKIP
     // suppress assertion failures, but never malformed TAP or bailouts.
-    const ok = this.failures.length === 0 && errors.length === 0
-    this.results = { ...parsed, ok, counts: { ...this.counts }, errors }
+    const isOk = this.failures.length === 0 && errors.length === 0
+    this.results = { ...parsed, ok: isOk, counts: { ...this.counts }, errors }
     this.push('\n')
 
     if (!this.options.noreport) {
@@ -153,7 +155,7 @@ class TapDance extends Transform {
     }
     // Protocol failures stay visible even with -noreport.
     for (const error of errors) this.push(c.red(`   ${error}\n`))
-    if (parsed.plan.skipAll && !this.parser.syntheticPlan && ok) {
+    if (parsed.plan.skipAll && !this.parser.syntheticPlan && isOk) {
       this.push(
         c.cyan(`   suite skipped${parsed.plan.skipReason ? ': ' + parsed.plan.skipReason : ''}\n`)
       )
@@ -169,7 +171,7 @@ class TapDance extends Transform {
       if (count > 0) summary.push(`${niceNumber(count)} ${label}`)
     }
     this.push(`   ${summary.join(', ')}\n`)
-    this.push(ok ? c.green('   ✔️\n') : c.red('   FAILED\n'))
+    this.push(isOk ? c.green('   ✔️\n') : c.red('   FAILED\n'))
     this.emit('complete', this.results)
   }
 }

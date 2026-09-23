@@ -91,9 +91,38 @@ stream/parser errors emit `error` and are handled by `pipeline`.
 
 ### Development
 
-Run `npm install`, then `npm test`. The suite exercises the real CLI with TAP
-fixtures and tests the stream API, exit status, and output flushing. Integration
-tests pipe real Tape suites into the CLI to cover asynchronous assertions,
-skips, failure diagnostics, rejected promises, and the diagnostic limit.
+Use pnpm 11.5.0 for development (pinned in `packageManager`):
+
+```bash
+pnpm install --frozen-lockfile
+pnpm test
+pnpm run lint
+```
+
+The regular suite uses Node's built-in test runner and covers the CLI, TAP
+fixtures, stream API, exit status, and output flushing. It does not install Tape.
+
+Real Tape compatibility tests live in the standalone `integration/tape` project,
+with a separate installation and lockfile. To run them:
+
+```bash
+pnpm --dir integration/tape install --frozen-lockfile
+pnpm run test:integration
+```
+
+These tests cover asynchronous assertions, skips, failure diagnostics, rejected
+promises, and the diagnostic limit. Tape's deprecated Glob/Inflight dependencies
+remain confined to that optional installation. CI runs it in a separate job.
+
+Both projects disable install scripts and require dependencies to be at least
+24 hours old, rejecting release-age exceptions and missing publication dates.
+CI uses frozen lockfiles. To intentionally update dependencies, use
+`pnpm install --no-frozen-lockfile` in the relevant project, review the lockfile
+diff, and run its tests. If a version is too new, wait for the age requirement
+instead of adding an exception.
+
+The pnpm release-age policy applies to development installs using pnpm; it is
+not enforced on downstream users installing the published package with npm.
+The repository's `.npmrc` also disables install scripts for npm users.
 
 MIT
