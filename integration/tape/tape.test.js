@@ -18,13 +18,13 @@ async function runTapeFile(source, directory) {
   const env = { ...process.env, NO_COLOR: '1' }
   delete env.FORCE_COLOR
   const options = {
-    cwd: path.join(__dirname, '..'),
+    cwd: path.join(__dirname, '../..'),
     env,
     stdio: ['pipe', 'pipe', 'pipe'],
     timeout: 10000
   }
   const producer = spawn(process.execPath, [file], options)
-  const reporter = spawn(process.execPath, [path.join(__dirname, '../src/cli.js')], options)
+  const reporter = spawn(process.execPath, [path.join(__dirname, '../../src/cli.js')], options)
   const producerClosed = once(producer, 'close')
   const reporterClosed = once(reporter, 'close')
   let output = ''

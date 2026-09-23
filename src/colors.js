@@ -2,11 +2,12 @@ import { isatty } from 'node:tty'
 
 const env = process.env
 const disabled = 'NO_COLOR' in env
-let enabled = !disabled && (
-  'FORCE_COLOR' in env || process.platform === 'win32' ||
-  (isatty(1) && env.TERM && env.TERM !== 'dumb') ||
-  ('CI' in env && ('GITHUB_ACTIONS' in env || 'GITLAB_CI' in env || 'CIRCLECI' in env))
-)
+const forcedColor = 'FORCE_COLOR' in env
+const windowsColor = process.platform === 'win32'
+const terminalColor = isatty(1) && env.TERM && env.TERM !== 'dumb'
+const ciColor = 'CI' in env && ('GITHUB_ACTIONS' in env || 'GITLAB_CI' in env || 'CIRCLECI' in env)
+
+let enabled = !disabled && (forcedColor || windowsColor || terminalColor || ciColor)
 
 export function enableColor() {
   if (!disabled) enabled = true

@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
 import { pipeline } from 'node:stream'
 import { enableColor } from './colors.js'
 import TapDance from './index.js'
@@ -15,11 +14,14 @@ const run = function () {
   })
   pipeline(process.stdin, reporter, process.stdout, err => {
     if (err) {
-      console.error(`tap-dancer: ${err.message}`)
+      console.error(`tap-dancer: ${err.message}`) //eslint-disable-line no-console
       process.exitCode = 1
     }
   })
 }
 
+if (isMain(import.meta.url)) {
+  run()
+}
+
 export default run
-if (isMain(import.meta.url)) run()

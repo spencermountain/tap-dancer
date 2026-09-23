@@ -1,5 +1,7 @@
 ### 0.4.1 [Sep 2026]
 - **[change]** dont print non-zero output
+- **[change]** unlink devDependencies
+- **[fix]** linting
  
 ### 0.4.0 [Sep 2026]
 
