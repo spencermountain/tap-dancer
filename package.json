@@ -1,6 +1,6 @@
 {
   "name": "tap-dancer",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "a quick human-readable test-reporter for Tap",
   "license": "MIT",
   "repository": "github:spencermountain/tap-dancer",
@@ -31,6 +31,6 @@
     "tape"
   ],
   "dependencies": {
-    "tap-parser": "^18.3.4"
+    "tap-parser": "18.3.4"
   }
 }

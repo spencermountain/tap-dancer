@@ -1,3 +1,6 @@
+### 0.4.3 [Sep 2026]
+- **[change]** nicer failure output
+
 ### 0.4.2 [Sep 2026]
 - **[change]** unlink devDependencies
 

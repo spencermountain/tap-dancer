@@ -242,7 +242,7 @@ test('slow consumers receive the complete report', async () => {
     highWaterMark: 1,
     write(chunk, encoding, callback) { text += chunk; setImmediate(callback) },
   }))
-  assert.match(text, /2 passed/)
+  assert.match(stripVTControlCharacters(text), /2 passed/)
   assert.ok(stripVTControlCharacters(text).endsWith('passed\n'))
 })
 
@@ -251,7 +251,7 @@ test('historical direct entry point remains executable', () => {
     input: '1..1\nok 1 works\n', encoding: 'utf8',
   })
   assert.equal(result.status, 0)
-  assert.match(result.stdout, /1 passed/)
+  assert.match(stripVTControlCharacters(result.stdout), /1 passed/)
 })
 
 const nested = (body, name, closing = `ok 1 ${name}`) =>
