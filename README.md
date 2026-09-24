@@ -1,4 +1,4 @@
-like [tap-dot](https://github.com/scottcorgan/tap-dot), but with more information about failures, and where to find them.
+like [tap-dot](https://github.com/scottcorgan/tap-dot), but with compact, readable failure details.
 
 based on [am-tap-dot](http://github.com/amokrushin/am-tap-dot) by [amokrushin](https://github.com/amokrushin). (Thanks!)
 
@@ -46,8 +46,13 @@ top-level test points; the parser also validates their child tests.
 Nested failures include their subtest path and assertion diagnostics. TODO/SKIP
 directives suppress assertion failures throughout the marked subtest, but
 malformed TAP and bailouts still fail the run at every nesting level.
-Reports show details for the first 10 failures, followed by the number of
-additional failures omitted. The final counts always include all test points.
+Reports show one line per failure (for example, `#5  mismatch - false !true`),
+without source locations. Value details start at a minimum column for loose alignment.
+Long names and rows are shortened with `…`; rows use the terminal width or 170
+characters when redirected. The first 35 failures are shown, followed by a dim
+`(showing 35 of n failing tests)` line and a blank line when truncated. The footer shows elapsed time and
+final counts, with failure labels first in bold red, numbers in dim grey, and passes dimmed. The final counts
+always include all test points.
 
 ### API
 

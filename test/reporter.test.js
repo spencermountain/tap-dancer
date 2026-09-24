@@ -51,14 +51,14 @@ for (const [name, input, status] of fixtures) {
     const result = run(input)
     assert.equal(result.status, status, result.stdout + result.stderr)
     assert.equal(result.stderr, '')
-    assert.match(result.stdout, status ? /FAILED/ : /✔️/)
+    assert.match(result.stdout, status ? /Failed/ : /passed/)
   })
 }
 
 test('separate counts for passed, failed, skipped and TODO', () => {
   const result = run('1..4\nok 1 good\nnot ok 2 bad\nok 3 omitted # skip reason\nnot ok 4 pending # todo later\n')
   assert.equal(result.status, 1)
-  assert.match(result.stdout, /1 passed, 1 failed, 1 skipped, 1 TODO/)
+  assert.match(result.stdout, /1 Failed, 1 passed, 1 skipped, 1 TODO/)
 })
 
 test('plain failures do not invent diagnostics', () => {
@@ -70,16 +70,52 @@ test('plain failures do not invent diagnostics', () => {
 test('diagnostics preserve falsy values and support found', () => {
   const result = run('1..1\nnot ok 1 mismatch\n  ---\n  found: false\n  expected: 0\n  message: wrong value\n  ...\n')
   assert.equal(result.status, 1)
-  assert.match(result.stdout, /actual: false/)
-  assert.match(result.stdout, /want: 0/)
+  assert.match(result.stdout, /mismatch +- false !0/)
   assert.match(result.stdout, /message: 'wrong value'/)
+})
+
+test('object and multiline diagnostics stay on one output line', () => {
+  const result = run(`1..1
+not ok 1 multiline mismatch
+  ---
+  actual:
+    values: [1, 2, 3]
+    text: |
+      first
+      second
+  expected: null
+  message: |
+    wrong
+    value
+  at: test.js:12
+  ...
+`)
+  assert.equal(result.status, 1)
+  const lines = result.stdout.trimEnd().split('\n')
+  assert.equal(lines.length, 4, result.stdout)
+  assert.match(lines[1], /#1  multiline mismatch +- .*values: \[ 1, 2, 3 \].*!null.*message:/)
+  assert.doesNotMatch(result.stdout, /test\.js/)
+})
+
+test('failure details align loosely and long rows end with an ellipsis', () => {
+  const names = ['short', 'a slightly longer name', 'x'.repeat(100)]
+  const input = '1..3\n' + names.map((name, i) =>
+    `not ok ${i + 1} ${name}\n  ---\n  actual: ${i === 2 ? 'y'.repeat(300) : 'true'}\n  expected: false\n  ...\n`).join('')
+  const result = run(input)
+  const rows = result.stdout.split('\n').filter(line => line.startsWith(' #'))
+  assert.equal(rows[0].indexOf(' - true'), rows[1].indexOf(' - true'))
+  assert.equal(rows[0].indexOf(' - true'), 30)
+  assert.ok(rows[2].includes('x… - '))
+  assert.equal(Array.from(rows[2]).length, 170)
+  assert.ok(rows[2].endsWith('…'))
+  assert.ok(result.stdout.endsWith('3 Failed, 0 passed\n'))
 })
 
 test('nofail suppresses status but keeps the failure report', () => {
   for (const input of ['1..1\nnot ok 1 broken\n', '', 'Bail out! setup failed\n']) {
     const result = run(input, ['-nofail'])
     assert.equal(result.status, 0)
-    assert.match(result.stdout, /FAILED/)
+    assert.match(result.stdout, /Failed/)
   }
 })
 
@@ -87,7 +123,7 @@ test('noreport hides assertion details, not status or protocol errors', () => {
   const result = run('1..1\nnot ok 1 secret failure name\n', ['-noreport'])
   assert.equal(result.status, 1)
   assert.doesNotMatch(result.stdout, /secret failure name/)
-  assert.match(result.stdout, /1 failed/)
+  assert.match(result.stdout, /1 Failed/)
   assert.match(run('Bail out! setup failed\n', ['-noreport']).stdout, /setup failed/)
 })
 
@@ -127,8 +163,8 @@ test('both CLI entry points execute through symlinks', async t => {
     })
     assert.ifError(result.error)
     assert.equal(result.status, 1, result.stderr)
-    assert.match(result.stdout, /1 failed/)
-    assert.match(result.stdout, /FAILED/)
+    assert.match(result.stdout, /1 Failed/)
+    assert.match(result.stdout, /Failed/)
     assert.equal(result.stderr, '')
   }
 })
@@ -167,7 +203,7 @@ test('large redirected output is fully flushed', () => {
   assert.equal(result.status, 0)
   assert.equal((result.stdout.match(/•/g) || []).length, count)
   assert.match(result.stdout, /12,000 passed/)
-  assert.ok(stripVTControlCharacters(result.stdout).endsWith('✔️\n'))
+  assert.ok(stripVTControlCharacters(result.stdout).endsWith('passed\n'))
 })
 
 test('upstream crash before TAP is rejected', () => {
@@ -207,7 +243,7 @@ test('slow consumers receive the complete report', async () => {
     write(chunk, encoding, callback) { text += chunk; setImmediate(callback) },
   }))
   assert.match(text, /2 passed/)
-  assert.ok(stripVTControlCharacters(text).endsWith('✔️\n'))
+  assert.ok(stripVTControlCharacters(text).endsWith('passed\n'))
 })
 
 test('historical direct entry point remains executable', () => {
@@ -227,7 +263,7 @@ for (const directive of ['TODO', 'SKIP']) {
     const result = run(input)
     assert.equal(result.status, 0, result.stdout)
     assert.match(result.stdout, /1 passed\n/)
-    assert.doesNotMatch(result.stdout, /unfinished|FAILED/)
+    assert.doesNotMatch(result.stdout, /unfinished|Failed/)
   })
 
   test(`${directive} cannot hide grandchild protocol errors`, () => {
@@ -235,7 +271,7 @@ for (const directive of ['TODO', 'SKIP']) {
     const result = run(input, ['-noreport'])
     assert.equal(result.status, 1, result.stdout)
     assert.match(result.stdout, /outer > inner: incorrect number of tests/)
-    assert.match(result.stdout, /FAILED/)
+    assert.match(result.stdout, /Failed/)
   })
 }
 
@@ -244,9 +280,8 @@ test('nested failures retain diagnostics and subtest context', () => {
   const result = run(input)
   assert.equal(result.status, 1)
   assert.match(result.stdout, /outer > inner: mismatch/)
-  assert.match(result.stdout, /actual: false/)
-  assert.match(result.stdout, /want: 0/)
-  assert.match(result.stdout, /at: 'test.js:12'/)
+  assert.match(result.stdout, /mismatch +- false !0/)
+  assert.doesNotMatch(result.stdout, /at:|test\.js/)
   const quiet = run(input, ['-noreport'])
   assert.equal(quiet.status, 1)
   assert.doesNotMatch(quiet.stdout, /mismatch|actual:|want:|test.js/)
@@ -277,28 +312,28 @@ test('both CLI entry points support forced color and respect NO_COLOR', () => {
       assert.ifError(result.error)
       assert.equal(result.status, 0)
       assert.equal(result.stdout.includes('\x1b['), !noColor)
-      assert.ok(stripVTControlCharacters(result.stdout).endsWith('✔️\n'))
+      assert.ok(stripVTControlCharacters(result.stdout).endsWith('passed\n'))
     }
   }
 })
 
-for (const count of [10, 11, 12]) {
-  test(`diagnostic limit preserves the first ten of ${count} failures`, () => {
+for (const count of [12, 35, 36, 52]) {
+  test(`diagnostic limit preserves the first thirty-five of ${count} failures`, () => {
     const input = `1..${count}\n` + Array.from({ length: count }, (_, i) =>
       `not ok ${i + 1} mismatch-${i + 1}\n  ---\n  actual: ${i + 1}\n  expected: 0\n  ...\n`).join('')
     const result = run(input)
     assert.equal(result.status, 1)
-    assert.equal((result.stdout.match(/actual:/g) || []).length, 10)
-    assert.match(result.stdout, /#10 - mismatch-10 -\n\s+actual: 10\n\s+want: 0/)
-    assert.match(result.stdout, new RegExp(`${count} failed`))
-    if (count > 10) {
-      assert.doesNotMatch(result.stdout, /mismatch-11|mismatch-12/)
-      assert.match(result.stdout, new RegExp(`${count - 10} additional failure${count === 11 ? '' : 's'} omitted`))
+    assert.equal((result.stdout.match(/^ #/gm) || []).length, Math.min(count, 35))
+    assert.match(result.stdout, /#12 mismatch-12 +- 12 !0\n/)
+    assert.match(result.stdout, new RegExp(`${count} Failed`))
+    assert.doesNotMatch(result.stdout, /mismatch-36|mismatch-52|omitted/)
+    if (count > 35) {
+      assert.ok(result.stdout.includes(`   (showing 35 of ${count} failing tests)\n\n`))
     } else {
-      assert.doesNotMatch(result.stdout, /omitted/)
+      assert.doesNotMatch(result.stdout, /showing/)
     }
     const quiet = run(input, ['-noreport'])
     assert.equal(quiet.status, 1)
-    assert.doesNotMatch(quiet.stdout, /mismatch|actual:|omitted/)
+    assert.doesNotMatch(quiet.stdout, /mismatch|actual:|omitted|showing/)
   })
 }
