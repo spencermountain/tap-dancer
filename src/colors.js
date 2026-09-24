@@ -24,4 +24,10 @@ export const red = color(31)
 export const green = color(32)
 export const yellow = color(33)
 export const cyan = color(36)
+export const magenta = color(35)
 export const gray = color(90)
+
+export const bold = value => enabled ? `\x1b[1m${value}\x1b[22m` : String(value)
+export const dim = value => enabled ? `\x1b[2m${value}\x1b[22m` : String(value)
+
+export const italic = value => enabled ? `\x1b[3m${value}\x1b[23m` : String(value)

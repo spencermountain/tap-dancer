@@ -74,10 +74,9 @@ test('real Tape asynchronous assertions and skipped tests pass through the CLI',
   assert.equal(result.producerStatus, 0, result.producerError)
   assert.equal(result.status, 0, result.output)
   assert.match(result.output, /2 passed, 1 skipped\n/)
-  assert.ok(result.output.endsWith('✔️\n'))
 })
 
-test('real Tape failures preserve values and source locations', async () => {
+test('real Tape failures preserve values on one line without source locations', async () => {
   const result = await runTape(`
     tape('values', t => {
       t.equal(false, 0, 'falsy mismatch')
@@ -87,14 +86,10 @@ test('real Tape failures preserve values and source locations', async () => {
   `)
   assert.equal(result.producerStatus, 1)
   assert.equal(result.status, 1, result.output)
-  assert.match(result.output, /falsy mismatch/)
-  assert.match(result.output, /actual: false/)
-  assert.match(result.output, /want: 0/)
-  assert.match(result.output, /object mismatch/)
-  assert.match(result.output, /actual: .*actual/)
-  assert.match(result.output, /want: .*expected/)
-  assert.match(result.output, /at: .*suite\.mjs:\d+:\d+/)
-  assert.match(result.output, /0 passed, 2 failed/)
+  assert.match(result.output, /#1  falsy mismatch +- false !0\n/)
+  assert.match(result.output, /#2  object mismatch +- "\{ value: 'actual' \}" !"\{ value: 'expected' \}"\n/)
+  assert.doesNotMatch(result.output, /at:|suite\.mjs/)
+  assert.match(result.output, /2 Failed, 0 passed/)
 })
 
 test('real Tape rejected async tests produce a failed report', async () => {
@@ -107,22 +102,22 @@ test('real Tape rejected async tests produce a failed report', async () => {
   assert.equal(result.producerStatus, 1)
   assert.equal(result.status, 1, result.output)
   assert.match(result.output, /integration rejection/)
-  assert.match(result.output, /1 failed/)
-  assert.ok(result.output.endsWith('FAILED\n'))
+  assert.match(result.output, /1 Failed/)
+  assert.ok(result.output.endsWith('1 Failed, 0 passed\n'))
 })
 
-test('real Tape large failure reports retain ten diagnostics and summarize the rest', async () => {
+test('real Tape large failure reports retain thirty-five diagnostics and include the full failure count', async () => {
   const result = await runTape(`
     tape('many failures', t => {
-      for (let i = 1; i <= 12; i++) t.equal(i, 0, 'mismatch-' + i)
+      for (let i = 1; i <= 52; i++) t.equal(i, 0, 'mismatch-' + i)
       t.end()
     })
   `)
   assert.equal(result.producerStatus, 1)
   assert.equal(result.status, 1)
-  assert.equal((result.output.match(/actual:/g) || []).length, 10)
-  assert.match(result.output, /#10 - mismatch-10 -/)
-  assert.doesNotMatch(result.output, /mismatch-11|mismatch-12/)
-  assert.match(result.output, /2 additional failures omitted/)
-  assert.match(result.output, /12 failed/)
+  assert.equal((result.output.match(/^ #/gm) || []).length, 35)
+  assert.match(result.output, /#35 mismatch-35 +-/)
+  assert.doesNotMatch(result.output, /mismatch-36|mismatch-52/)
+  assert.match(result.output, /\(showing 35 of 52 failing tests\)\n\n/)
+  assert.match(result.output, /52 Failed/)
 })
