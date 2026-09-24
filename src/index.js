@@ -32,7 +32,7 @@ const renderRow = (parts) => {
     .map(([text, style]) => {
       const chars = Array.from(text).slice(0, Math.max(0, remaining))
       remaining -= chars.length
-      return chars.length ? style(chars.join('')) : ''
+      return chars.length > 0 ? style(chars.join('')) : ''
     })
     .join('')
   return row + (length > width ? c.dim('…') : '') + '\n'
