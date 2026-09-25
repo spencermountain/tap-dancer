@@ -9,12 +9,6 @@ import { isMain } from './is-main.js'
 
 const failureLimit = 35
 const dimNumber = (value) => c.dim(value)
-const coloredText = (value, color) =>
-  value
-    .split(/(\d+(?:[,.]\d+)*)/g)
-    .map((part, i) => (i % 2 ? dimNumber(part) : color(part)))
-    .join('')
-const failureText = (value) => coloredText(value, c.red)
 const singleLine = (value) => String(value).replace(/[\r\n\u2028\u2029]+/g, ' ')
 const formatValue = (value) =>
   singleLine(inspect(value, { colors: false, depth: 4, compact: true, breakLength: Infinity }))
@@ -167,25 +161,25 @@ class TapDance extends Transform {
         const number = String(i + 1).padEnd(2)
         const prefix = ` #${number} `
         const name = truncate(singleLine(assertion.name || 'unnamed assertion'), 82)
-        parts.push([' ', c.dim], ['#' + number, dimNumber], [' ', c.gray], [name, failureText])
+        parts.push([' ', c.dim], ['#' + number, dimNumber], [' ', c.gray], [name, c.red])
         const hasDetails = [actual, 'expected', 'message'].some((key) => Object.hasOwn(diag, key))
         if (hasDetails) {
           const padding = ' '.repeat(Math.max(0, 30 - Array.from(prefix + name).length))
           parts.push([padding + ' - ', c.gray])
           if (Object.hasOwn(diag, actual)) {
-            parts.push([formatValue(diag[actual]), (text) => coloredText(text, (value) => c.dim(c.yellow(value)))])
+            parts.push([formatValue(diag[actual]), (text) => c.dim(c.yellow(text))])
           }
           if (Object.hasOwn(diag, 'expected')) {
             parts.push(
               [Object.hasOwn(diag, actual) ? ' !' : '!', (text) => c.italic(c.red(text))],
-              [formatValue(diag.expected), (text) => c.italic(coloredText(text, c.magenta))]
+              [formatValue(diag.expected), (text) => c.italic(c.magenta(text))]
             )
           }
           if (Object.hasOwn(diag, 'message')) {
             const space = Object.hasOwn(diag, actual) || Object.hasOwn(diag, 'expected') ? ' ' : ''
             parts.push([
               `${space}message: ${formatValue(diag.message)}`,
-              (text) => coloredText(text, c.gray)
+              c.gray
             ])
           }
         }
@@ -200,7 +194,7 @@ class TapDance extends Transform {
       }
     }
     // Protocol failures stay visible even with -noreport.
-    for (const error of errors) this.push(failureText(`   ${error}\n`))
+    for (const error of errors) this.push(c.red(`   ${error}\n`))
     if (parsed.plan.skipAll && !this.parser.syntheticPlan && isOk) {
       this.push(
         c.cyan(`   suite skipped${parsed.plan.skipReason ? ': ' + parsed.plan.skipReason : ''}\n`)
@@ -217,7 +211,7 @@ class TapDance extends Transform {
     ]) {
       if (count > 0) summary.push(dimNumber(niceNumber(count)) + c.dim(` ${label}`))
     }
-    this.push(`   ${summary.join(', ')}\n`)
+    this.push(`   ${isOk ? c.green('✓') + ' ' : ''}${summary.join(', ')}\n`)
     this.emit('complete', this.results)
   }
 }

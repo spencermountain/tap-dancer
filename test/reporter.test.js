@@ -51,7 +51,9 @@ for (const [name, input, status] of fixtures) {
     const result = run(input)
     assert.equal(result.status, status, result.stdout + result.stderr)
     assert.equal(result.stderr, '')
-    assert.match(result.stdout, status ? /Failed/ : /passed/)
+    assert.match(result.stdout, status ? /Failed/ : /✓ .*passed/)
+    assert.doesNotMatch(result.stdout, /✔️/)
+    if (status) assert.doesNotMatch(result.stdout, /✓/)
   })
 }
 
@@ -312,9 +314,25 @@ test('both CLI entry points support forced color and respect NO_COLOR', () => {
       assert.ifError(result.error)
       assert.equal(result.status, 0)
       assert.equal(result.stdout.includes('\x1b['), !noColor)
+      assert.equal(result.stdout.includes('\x1b[32m✓\x1b[39m'), !noColor)
       assert.ok(stripVTControlCharacters(result.stdout).endsWith('passed\n'))
     }
   }
+})
+
+test('numbers within failure names and values retain their surrounding colors', () => {
+  const env = { ...process.env, FORCE_COLOR: '1' }
+  delete env.NO_COLOR
+  const result = spawnSync(process.execPath, [cli], {
+    input: '1..1\nnot ok 1 case 123\n  ---\n  actual: -1.5\n  expected: 2.5\n  ...\n',
+    encoding: 'utf8', env, timeout: 10000,
+  })
+  assert.ifError(result.error)
+  assert.equal(result.status, 1)
+  assert.ok(result.stdout.includes('\x1b[2m#1 \x1b[22m'))
+  assert.ok(result.stdout.includes('\x1b[31mcase 123\x1b[39m'))
+  assert.ok(result.stdout.includes('\x1b[2m\x1b[33m-1.5\x1b[39m\x1b[22m'))
+  assert.ok(result.stdout.includes('\x1b[3m\x1b[35m2.5\x1b[39m\x1b[23m'))
 })
 
 for (const count of [12, 35, 36, 52]) {
